@@ -1,0 +1,221 @@
+.directive('tree', [function () {
+
+    return {
+        require: '?ngModel',
+        restrict: 'A',
+        scope: {
+            ngModel: '=',
+            treeClick: "=",
+            treeChecked: "="
+        },
+        link: function ($scope, element, attrs, ngModel) {
+            if ($scope.treeChecked == true) {
+                var setting = {
+                    check: {
+                        enable: true,
+                        autoCheckTrigger: false,
+                        chkStyle: "checkbox",
+                        chkboxType: { "Y": "ps", "N": "ps" }
+                    },
+                    data: {
+                        simpleData: {
+                            enable: true,
+                            idKey: "Code",
+                            pIdKey: "ParentCode",
+                            rootPId: "0",
+
+                        },
+                        key: {
+                            name: "Name"
+                        }
+                    },
+                    callback: {
+                        beforeClick: function (treeId, treeNode) {
+                            var zTree = $.fn.zTree.getZTreeObj("tree");
+
+                            if ($scope.treeClick == true) {
+                                return true;
+                            } else {
+                                if (treeNode.isParent) {
+                                    zTree.expandNode(treeNode);
+                                }
+                                return false;
+                            }
+
+                        },
+                     
+                    }
+                };
+                $scope.$on("treeData", function (event, data) {
+                    var treeObj = $.fn.zTree.init(element, setting, data);
+                    var zTree = $.fn.zTree.getZTreeObj("tree");
+                    zTree.expandNode(zTree.getNodeByParam("ParentCode", "0"), true);
+                    var nodes = zTree.getNodesByParam("NodeType","1");
+                    $(nodes).each(function (i, node) {
+                        node.isParent = true;
+                        zTree.updateNode(zTree.getNodesByParam("NodeType", "1")[i]);
+                    })
+                    var nodes = zTree.getNodesByParam("NodeType", "2");
+                    $(nodes).each(function (i, node) {
+                        node.icon = "/Asset/vendors/zTree/css/zTreeStyle/img/diy/use.ico";
+                        zTree.updateNode(zTree.getNodesByParam("NodeType", "2")[i]);
+                    })
+                 
+                    var selectName = $("#selectName").val();
+                    if (typeof selectName == "undefined" || selectName == "") {
+                        zTree.selectNode(zTree.getNodeByParam("ParentCode", "0"));
+                        $("#selectName").val(zTree.getSelectedNodes()[0].Name);
+                    } else {
+                        for (var i = 0; i < data.length; i++) {
+                            if (data[i]["Name"] == selectName) {
+                                zTree.selectNode(zTree.getNodeByParam("Name", data[i]["Name"]));
+                            }
+                        }
+                    }
+                })
+            } else {
+
+                function getUrl(treeId,treeNode) {
+                    var url = "/api/department/getdepttreechild?deptCode=" + treeNode.Code + "&nodeType="+treeNode.NodeType;
+                    return url;
+                };
+                var setting = {
+                    data: {
+                        simpleData: {
+                            enable: true,
+                            idKey: "Code",
+                            pIdKey: "ParentCode",
+                            rootPId: "0",
+
+                        },
+                        key: {
+                            name: "Name"
+                        }
+                    },
+                    async: {
+                        enable: true,
+                        url: getUrl,
+                        autoParam: [],
+                        type:"get",
+                        contentType: "application/json",
+                    },
+                    
+                    
+                    callback: {
+                        beforeAsync: function(){
+                            return true;
+                        },
+                        onAsyncSuccess: function (event, treeId, treeNode, msg) {
+                            var zTree = $.fn.zTree.getZTreeObj("tree");
+                            var nodes = zTree.getNodesByParam("NodeType", "1");
+                            $(nodes).each(function (i, node) {
+                                node.isParent = true;
+                                zTree.updateNode(zTree.getNodesByParam("NodeType", "1")[i]);
+                            })
+                            zTree.updateNode(treeNode);
+                        },
+                        onAsyncError: function (event, treeId, treeNode, XMLHttpRequest, textStatus, errorThrown) {
+                            alert(XMLHttpRequest);
+                        },
+                        beforeClick: function (treeId, treeNode) {
+                            var zTree = $.fn.zTree.getZTreeObj("tree");
+                            zTree.reAsyncChildNodes(treeNode, "refresh");
+                            if ($scope.treeClick == true) {
+                                return true;
+                            } else {
+                                if (treeNode.isParent) {
+                                    zTree.expandNode(treeNode);
+                                }
+                                return false;
+                            }
+
+                        },
+                        onClick: function (event, treeId, treeNode) {
+                            $scope.$emit("treeNodeClicked", treeNode);
+                        }
+                    }
+                };
+               
+                $scope.$on("treeData", function (event, data) {
+                    var treeObj = $.fn.zTree.init(element, setting, data);
+                    var zTree = $.fn.zTree.getZTreeObj("tree");
+                    //zTree.expandNode(zTree.getNodeByParam("ParentCode", "0"), true);
+                    var nodes = zTree.getNodesByParam("NodeType", "1");
+                    $(nodes).each(function (i, node) {
+                        node.isParent = true;
+                        zTree.updateNode(zTree.getNodesByParam("NodeType", "1")[i]);
+                    })
+                    //var nodes = zTree.getNodesByParam("NodeType", "2");
+                    //$(nodes).each(function (i, node) {
+                    //    node.icon = "/Asset/vendors/zTree/css/zTreeStyle/img/diy/use.ico";
+                    //    zTree.updateNode(zTree.getNodesByParam("NodeType", "2")[i]);
+                    //})
+
+                    //var selectName = $("#selectName").val();
+                    //if (typeof selectName == "undefined" || selectName == "") {
+                    //    zTree.selectNode(zTree.getNodeByParam("ParentCode", "0"));
+                    //    $("#selectName").val(zTree.getSelectedNodes()[0].Name);
+                    //} else {
+                    //    for (var i = 0; i < data.length; i++) {
+                    //        if (data[i]["Name"] == selectName) {
+                    //            zTree.selectNode(zTree.getNodeByParam("Name", data[i]["Name"]));
+                    //        }
+                    //    }
+                    //}
+                })
+
+                $scope.getData = function () {
+
+                }
+
+                //var setting = {
+                //    data: {
+                //        key: {
+                //            children: "children",
+                //            name: "label"
+                //        }
+                //    },
+                //    callback: {
+                //        beforeClick: function (treeId, treeNode) {
+                //            var zTree = $.fn.zTree.getZTreeObj("tree");
+                //            if ($scope.treeClick == true) {
+                //                return true;
+                //            } else {
+                //                if (treeNode.isParent) {
+                //                    zTree.expandNode(treeNode);
+                //                }
+                //                return false;
+                //            }
+                //        },
+                //        onClick: function (event, treeId, treeNode) {
+                //            $scope.$emit("treeNodeClicked", treeNode);
+                //        }
+                //    }
+                //};
+
+                //$scope.$on("treeData", function (event, data) {
+                //    var treeObj = $.fn.zTree.init(element, setting, data);
+
+                //    var zTree = $.fn.zTree.getZTreeObj("tree");
+                //    zTree.expandNode(zTree.getNodeByParam("DeptCode", "0"), true);
+
+                //    var selectName = $("#selectName").val();
+                //    if (typeof selectName == "undefined" || selectName == "") {
+                //        zTree.selectNode(zTree.getNodeByParam("DeptCode", "0"));
+                //        $("#selectName").val(zTree.getSelectedNodes()[0].label);
+                //    } else {
+                //        for (var i = 0; i < data.length; i++) {
+                //            if (data[i]["label"] == selectName) {
+                //                zTree.selectNode(zTree.getNodeByParam("label", data[i]["label"]));
+                //            }
+                //        }
+                //    }
+                //})
+            }
+
+
+
+
+        }
+    }
+}])
